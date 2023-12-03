@@ -1,17 +1,5 @@
 import time
-
-# Sudoku puzzle to be solved
-puzzle = [
-    [3, 0, 6, 5, 0, 8, 4, 0, 0],
-    [5, 2, 0, 0, 0, 0, 0, 0, 0],
-    [0, 8, 7, 0, 0, 0, 0, 3, 1],
-    [0, 0, 3, 0, 1, 0, 0, 8, 0],
-    [9, 0, 0, 8, 6, 3, 0, 0, 5],
-    [0, 5, 0, 0, 9, 0, 6, 0, 0],
-    [1, 3, 0, 0, 0, 0, 2, 5, 0],
-    [0, 0, 0, 0, 0, 0, 0, 7, 4],
-    [0, 0, 5, 2, 0, 6, 3, 0, 0]
-]
+import sys
 
 # Dictionary to store the positions of the elements to be filled
 # elementPositions = {element : [[row1, col1], [row2, col2]]}
@@ -72,6 +60,9 @@ def safeToAddAtPos(row, col):
 
 
 def solvePuzzle(elementIndex, elements, rowIndex, possibleRows):
+    if rowIndex >= len(possibleRows):
+        return False
+
     possibleCols = list(
         possiblePositions[elements[elementIndex]][possibleRows[rowIndex]])
     for col in possibleCols:
@@ -141,8 +132,10 @@ def findPossiblePositions():
         possibleCols = list(range(0, 9))
 
         for currentPosition in positions:
-            possibleRows.remove(currentPosition[0])
-            possibleCols.remove(currentPosition[1])
+            if currentPosition[0] in possibleRows:
+                possibleRows.remove(currentPosition[0])
+            if currentPosition[1] in possibleCols:
+                possibleCols.remove(currentPosition[1])
 
         if len(possibleRows) == 0 or len(possibleCols) == 0:
             continue
@@ -154,8 +147,39 @@ def findPossiblePositions():
                         possiblePositions[element][r] = []
                     possiblePositions[element][r].append(c)
 
+# Write the solution to the output file
+# outputFile: output file name
+
+
+def writeSolutionToFile(outputFile, isSolved):
+    with open(outputFile, 'w') as file:
+        if isSolved:
+            for row in puzzle:
+                file.write(' '.join(map(str, row)) + '\n')
+        else:
+            file.write('No Solution')
+
 
 if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print('To run the sudoku solver: python sudoku_solver.py <input_file>')
+        sys.exit(1)
+
+    # Read the sudoku puzzle from the input file
+    inputFile = sys.argv[1]
+    try:
+        with open(inputFile, 'r') as file:
+            # Sudoku puzzle as a 2D array
+            puzzle = [[int(num) for num in line.split()]
+                      for line in file.readlines()]
+    except FileNotFoundError:
+        print(f"File '{inputFile}' not found.")
+        sys.exit(1)
+    except ValueError:
+        print(
+            "Invalid content in the input file.")
+        sys.exit(1)
+
     # Record the start time
     startTime = time.time()
 
@@ -176,10 +200,12 @@ if __name__ == "__main__":
 
     firstElementRows = list(possiblePositions[elements[0]].keys())
     # print('firstElementRows', firstElementRows)
-    solvePuzzle(0, elements, 0, firstElementRows)
+    isSolved = solvePuzzle(0, elements, 0, firstElementRows)
 
-    print('Solved Puzzle:')
-    printPuzzle()
+    outputFile = f"{inputFile.split('.')[0]}_output.txt"
+    writeSolutionToFile(outputFile, isSolved)
+
+    print(f"Solution written to {outputFile}")
 
     # Record the end time
     endTime = time.time()
