@@ -1,6 +1,6 @@
 import time
 
-# Input matrix
+# Sudoku puzzle to be solved
 puzzle = [
     [3, 0, 6, 5, 0, 8, 4, 0, 0],
     [5, 2, 0, 0, 0, 0, 0, 0, 0],
@@ -27,7 +27,7 @@ countLeft = {}
 # }
 possiblePositions = {}
 
-# Print the matrix array
+# Print the puzzle
 
 
 def printPuzzle():
@@ -37,7 +37,7 @@ def printPuzzle():
         print()
 
 
-# Method to check if the inserted element is safe
+# Method to check if the inserted element is safe by checking if the element is present in the same row, column or the 3x3 sub matrix
 # row: row index
 # col: column index
 def safeToAddAtPos(row, col):
@@ -64,46 +64,47 @@ def safeToAddAtPos(row, col):
     return True
 
 # Recursively fill the puzzle
-# If there is no element in the
-# element: index of the element to be inserted
+# Loop through each possible positions of the element in the puzzle matrix and if empty, add element to the position and check if it is safe. If safe, then if more possible rows are present, then recursively call the method with next row and if no more possible rows are present, then if more elements are present, then recursively call the method with next element and if no more elements are present, then return True. If not safe, then backtrack and try next position of the element. If no more positions are present, then return False.
+# elementIndex: index of the element to be inserted
 # elements: list of elements to be inserted
-# row: index of the row to be inserted
-# rows: list of row index where element could be inserted
+# rowIndex: index of the row to be inserted
+# possibleRows: list of row index where element could be inserted
 
 
-def solvePuzzle(element, elements, row, rows):
-    possibleCols = list(possiblePositions[elements[element]][rows[row]])
-    for col in possiblePositions[elements[element]][rows[row]]:
-        if puzzle[rows[row]][col] > 0:  # If the position is already filled
+def solvePuzzle(elementIndex, elements, rowIndex, possibleRows):
+    possibleCols = list(
+        possiblePositions[elements[elementIndex]][possibleRows[rowIndex]])
+    for col in possibleCols:
+        if puzzle[possibleRows[rowIndex]][col] > 0:  # If the position is already filled
             continue
         # Add the element to the position
-        puzzle[rows[row]][col] = elements[element]
-        if safeToAddAtPos(rows[row], col):
-            if row < len(rows) - 1:
-                if solvePuzzle(element, elements, row + 1, rows):
+        puzzle[possibleRows[rowIndex]][col] = elements[elementIndex]
+        if safeToAddAtPos(possibleRows[rowIndex], col):
+            if rowIndex < len(possibleRows) - 1:
+                if solvePuzzle(elementIndex, elements, rowIndex + 1, possibleRows):
                     return True
                 else:
                     # Backtrack if the element cannot be inserted in the position
-                    puzzle[rows[row]][col] = 0
+                    puzzle[possibleRows[rowIndex]][col] = 0
                     continue
             else:  # Last row
-                if element < len(elements) - 1:
+                if elementIndex < len(elements) - 1:
                     # Next element
                     nextElementRows = list(possiblePositions[
-                        elements[element + 1]].keys())
-                    if solvePuzzle(element + 1, elements, 0, nextElementRows):
+                        elements[elementIndex + 1]].keys())
+                    if solvePuzzle(elementIndex + 1, elements, 0, nextElementRows):
                         return True
                     else:
                         # Backtrack
-                        puzzle[rows[row]][col] = 0
+                        puzzle[possibleRows[rowIndex]][col] = 0
                         continue
                 return True
         # Backtrack
-        puzzle[rows[row]][col] = 0
+        puzzle[possibleRows[rowIndex]][col] = 0
     return False
 
 
-# Fill the pos and rem dictionary. It will be used to build graph
+# Record the positions of the elements to be filled and the count of the elements to be filled
 def recordPostionsAndCountLeft():
     for row in range(0, 9):
         for col in range(0, 9):
@@ -120,14 +121,15 @@ def recordPostionsAndCountLeft():
                 # Reduce the count of the element by 1
                 countLeft[puzzle[row][col]] -= 1
 
-    # Fill the elements not present in input matrix. Example: 1 is missing in input matrix
+    # Add Max count of the elements to the countLeft dictionary for the elements that are not present in the puzzle
     for row in range(1, 10):
         if row not in elementPositions:
             elementPositions[row] = []
         if row not in countLeft:
             countLeft[row] = 9
 
-# Build the graph
+# Find the possible positions of the elements to be filled
+# If row and column of the element is already present in the elementPositions dictionary, then skip the position. If not present and position is empty, then add the position to the possiblePositions dictionary
 
 
 def findPossiblePositions():
@@ -173,9 +175,10 @@ if __name__ == "__main__":
     # print('elements', elements)
 
     firstElementRows = list(possiblePositions[elements[0]].keys())
-    print('firstElementRows', firstElementRows)
+    # print('firstElementRows', firstElementRows)
     solvePuzzle(0, elements, 0, firstElementRows)
 
+    print('Solved Puzzle:')
     printPuzzle()
 
     # Record the end time
