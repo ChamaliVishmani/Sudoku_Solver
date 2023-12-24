@@ -2,6 +2,7 @@ import numpy as np
 import cv2 as cv
 import os
 from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
 
 dataPath = "data"
 testRatio = 0.2  # 20% of data used for testing
@@ -44,5 +45,18 @@ X_train, X_Validation, y_train, y_validation = train_test_split(
 
 print("Shape of training data: ", X_train.shape)
 print("Shape of testing data: ", X_test.shape)
-
 print("Shape of validation data: ", X_Validation.shape)
+
+numOfSamplesPerClass = []
+# Check if number of samples for each class is balanced
+for classNum in range(0, noOfClasses):
+    numOfSamplesPerClass.append(len(np.where(y_train == classNum)[0]))
+print("Number of samples for each class: ", numOfSamplesPerClass)
+
+# Plot bar graph of number of images for each class
+plt.figure(figsize=(10, 5))
+plt.bar(range(0, noOfClasses), numOfSamplesPerClass)
+plt.title("Number of images for each class")
+plt.xlabel("Class ID - Digit")
+plt.ylabel("Number of images")
+plt.show()
