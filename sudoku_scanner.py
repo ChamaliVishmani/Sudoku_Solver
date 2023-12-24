@@ -39,6 +39,7 @@ if biggestContourPoints.size != 0:
         sourcePoints, destinationPoints)
     imgWarpColored = cv.warpPerspective(
         img, transformMatrix, (imgWidth, imgHeight))
+    imgWarpColored = cv.cvtColor(imgWarpColored, cv.COLOR_BGR2GRAY)
 
 
 # stack images
