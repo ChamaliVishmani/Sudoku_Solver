@@ -20,6 +20,8 @@ def IncreaseAttemptCount():
 def getAttempts():
     return attemptCount
 
+# emptySpace class represents an empty cell in the puzzle. Each empty cell has a row number, a column number, a submatrix number, a value and a set of potential values.
+
 
 class emptySpace:
     def __init__(self, rowIndex, colIndex):
@@ -35,6 +37,7 @@ class emptySpace:
     def setValue(self, value):
         self.value = value
 
+    # compare the number of potential values of two empty cells - for sorting
     def __lt__(self, other):
         if len(self.potentialVals) < len(other.potentialVals):
             return True
