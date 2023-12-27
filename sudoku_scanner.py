@@ -58,6 +58,7 @@ if biggestContourPoints.size != 0:
     posArray = np.where(detectedDigits > 0, 0, 1)
     print(posArray)
 
+    # continue - https://youtu.be/qOXDoYUgNlU?si=vZRYGnANS2Mcss8g&t=2239
 
 # stack images
 imgArray = ([img, imgThreshold, imgContours],

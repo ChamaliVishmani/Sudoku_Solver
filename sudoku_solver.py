@@ -15,12 +15,15 @@ countLeft = {}
 # }
 possiblePositions = {}
 
+puzzleLength = 9  # Default puzzle length 9x9 sudoku
+subMatrixLength = 3  # Default sub matrix length 3x3
+
 # Print the puzzle
 
 
 def printPuzzle():
-    for i in range(0, 9):
-        for j in range(0, 9):
+    for i in range(0, puzzleLength):
+        for j in range(0, puzzleLength):
             print(str(puzzle[i][j]), end=" ")
         print()
 
@@ -31,19 +34,19 @@ def printPuzzle():
 def safeToAddAtPos(row, col):
 
     num = puzzle[row][col]
-    for i in range(0, 9):
+    for i in range(0, puzzleLength):
         # Check if the element is present in the same row or column other than the current row and column
         if i != col and puzzle[row][i] == num:
             return False
         if i != row and puzzle[i][col] == num:
             return False
 
-    # Check if the element is present in the same 3x3 sub matrix
-    rowStart = int(row / 3) * 3
-    rowEnd = rowStart + 3
+    # Check if the element is present in the same sub matrix
+    rowStart = int(row / subMatrixLength) * subMatrixLength
+    rowEnd = rowStart + subMatrixLength
 
-    colStart = int(col / 3) * 3
-    colEnd = colStart + 3
+    colStart = int(col / subMatrixLength) * subMatrixLength
+    colEnd = colStart + subMatrixLength
 
     for currentRow in range(rowStart, rowEnd):
         for currentCol in range(colStart, colEnd):
@@ -97,8 +100,8 @@ def solvePuzzle(elementIndex, elements, rowIndex, possibleRows):
 
 # Record the positions of the elements to be filled and the count of the elements to be filled
 def recordPostionsAndCountLeft():
-    for row in range(0, 9):
-        for col in range(0, 9):
+    for row in range(0, puzzleLength):
+        for col in range(0, puzzleLength):
             # If a number is present in the position
             if puzzle[row][col] > 0:
                 if puzzle[row][col] not in elementPositions:
@@ -108,16 +111,16 @@ def recordPostionsAndCountLeft():
                 elementPositions[puzzle[row][col]].append([row, col])
                 if puzzle[row][col] not in countLeft:
                     # Add max count of the element to the countLeft dictionary
-                    countLeft[puzzle[row][col]] = 9
+                    countLeft[puzzle[row][col]] = puzzleLength
                 # Reduce the count of the element by 1
                 countLeft[puzzle[row][col]] -= 1
 
     # Add Max count of the elements to the countLeft dictionary for the elements that are not present in the puzzle
-    for row in range(1, 10):
+    for row in range(1, puzzleLength + 1):
         if row not in elementPositions:
             elementPositions[row] = []
         if row not in countLeft:
-            countLeft[row] = 9
+            countLeft[row] = puzzleLength
 
 # Find the possible positions of the elements to be filled
 # If row and column of the element is already present in the elementPositions dictionary, then skip the position. If not present and position is empty, then add the position to the possiblePositions dictionary
@@ -128,8 +131,8 @@ def findPossiblePositions():
         if element not in possiblePositions:
             possiblePositions[element] = {}
 
-        possibleRows = list(range(0, 9))
-        possibleCols = list(range(0, 9))
+        possibleRows = list(range(0, puzzleLength))
+        possibleCols = list(range(0, puzzleLength))
 
         for currentPosition in positions:
             if currentPosition[0] in possibleRows:
@@ -160,6 +163,11 @@ def writeSolutionToFile(outputFile, isSolved):
             file.write('No Solution')
 
 
+def isHexadoku():
+    # check if length of puzzle is 16 and all rows are of length 16
+    return (len(puzzle) == 16 and all(len(row) == 16 for row in puzzle))
+
+
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         print('To run the sudoku solver: python sudoku_solver.py <input_file>')
@@ -182,6 +190,13 @@ if __name__ == "__main__":
 
     # Record the start time
     startTime = time.time()
+
+    if isHexadoku():
+        puzzleLength = 16
+        subMatrixLength = 4
+        print('Hexadoku puzzle')
+
+    printPuzzle()
 
     recordPostionsAndCountLeft()
     # print('elementPositions', elementPositions)
