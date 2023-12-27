@@ -17,7 +17,7 @@ imageDimensions = (32, 32, 3)
 
 # model parameters
 batchSize = 50
-epochsVal = 10
+epochsVal = 30
 
 dataList = os.listdir(dataPath)
 
