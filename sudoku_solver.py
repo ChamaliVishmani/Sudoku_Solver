@@ -80,7 +80,10 @@ def main(parameters):
         print('___Solved Sudoku___')
         for val in solvedSudoku:
             print(' '.join(val))
+        # write the solved puzzle to output file
+        writeSolutionToFile(parameters, solvedSudoku, isSolved=True)
     else:
+        writeSolutionToFile(parameters, solvedSudoku=None, isSolved=False)
         print('No solution!')
 
 # check whether the input parameters are valid. If the number of parameters is not 2, or the input file is not a .txt file, or the input file does not exist, the program will exit with an error message.
@@ -448,6 +451,21 @@ def removeFromAvailableValsSets(emptyCell, rowValSets, colValSets, subMatrixSets
     rowValSets[emptyCell.row].discard(emptyCell.value)
     colValSets[emptyCell.col].discard(emptyCell.value)
     subMatrixSets[emptyCell.subMatrix].discard(emptyCell.value)
+
+# write the solution to the output file
+# parameters: input arguments
+# solvedSudoku: a 2D puzzle matrix with solved values
+# isSolved: True if the puzzle is solved, otherwise False
+
+
+def writeSolutionToFile(parameters, solvedSudoku, isSolved):
+    outputFile = f"{parameters[1].split('.')[0]}_output.txt"
+    with open(outputFile, 'w') as file:
+        if isSolved:
+            for row in solvedSudoku:
+                file.write(' '.join(map(str, row)) + '\n')
+        else:
+            file.write('No Solution')
 
 
 if __name__ == "__main__":
