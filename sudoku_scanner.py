@@ -1,11 +1,12 @@
 import cv2 as cv
 import numpy as np
 
-from utils import preProcessImg, stackImages, findBiggestContour, reoderPoints
+from utils import preProcessImg, stackImages, findBiggestContour, reoderPoints, splitImgToBoxes, initializePredectionModel
 
 imgPath = "sudokuImages/1.jpg"
 imgHeight = 450
 imgWidth = 450
+digitsClassModel = initializePredectionModel()
 
 # prepare image
 img = cv.imread(imgPath)
@@ -40,6 +41,12 @@ if biggestContourPoints.size != 0:
     imgWarpColored = cv.warpPerspective(
         img, transformMatrix, (imgWidth, imgHeight))
     imgWarpColored = cv.cvtColor(imgWarpColored, cv.COLOR_BGR2GRAY)
+
+    # split image and find digits
+    imgSolvedDigits = blankImg.copy()
+    boxes = splitImgToBoxes(imgWarpColored)
+    # print(len(boxes))
+    # cv.imshow("Sample Box", boxes[0])
 
 
 # stack images

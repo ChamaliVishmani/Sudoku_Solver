@@ -1,5 +1,6 @@
 import cv2 as cv
 import numpy as np
+from tensorflow.keras.models import load_model
 
 
 def preProcessImg(img):
@@ -95,3 +96,49 @@ def reoderPoints(points):
     orderedPoints[2] = points[np.argmax(xyDifference)]
 
     return orderedPoints
+
+# split the image into 81 boxes
+
+
+def splitImgToBoxes(img):
+    rows = np.vsplit(img, 9)  # split the image into 9 rows
+    boxes = []
+    for row in rows:
+        cols = np.hsplit(row, 9)  # split each row into 9 columns
+        for box in cols:
+            boxes.append(box)
+    return boxes
+
+# initialize the model
+
+
+def initializePredectionModel():
+    # load the model
+    model = load_model('digits_classification/model_trained.h5')
+    return model
+
+# get the prediction of each box
+
+
+def getPrediction(boxes, model):
+    result = []
+    for image in boxes:
+        # prepare the image
+        img = np.asarray(image)
+        img = img[4:img.shape[0]-4, 4:img.shape[1]-4]  # remove the border
+        img = cv.resize(img, (28, 28))
+        img = img/255
+        img = img.reshape(1, 28, 28, 1)
+
+        # predict
+        predictions = model.predict(img)
+        classIndex = np.argmax(predictions)
+        probabilityValue = np.amax(predictions)
+
+        # check if probability is above threshold
+        threshold = 0.8
+        if probabilityValue > threshold:
+            result.append(classIndex)
+        else:
+            result.append(0)
+    return result

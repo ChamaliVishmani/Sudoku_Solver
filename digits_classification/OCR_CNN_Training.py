@@ -70,6 +70,7 @@ plt.bar(range(0, noOfClasses), numOfSamplesPerClass)
 plt.title("Number of images for each class")
 plt.xlabel("Class ID - Digit")
 plt.ylabel("Number of images")
+plt.savefig('images_per_class.png')
 plt.show()
 
 
@@ -163,6 +164,7 @@ plt.plot(history.history['val_loss'])
 plt.legend(['training', 'validation'])
 plt.title('Loss')
 plt.xlabel('epoch')
+plt.savefig('loss_plot.png')
 
 plt.figure(2)
 plt.plot(history.history['accuracy'])
@@ -170,6 +172,7 @@ plt.plot(history.history['val_accuracy'])
 plt.legend(['training', 'validation'])
 plt.title('Accuracy')
 plt.xlabel('epoch')
+plt.savefig('accuracy_plot.png')
 
 plt.show()
 
@@ -182,3 +185,5 @@ print('Test accuracy: ', score[1])
 pickleOut = open("model_trained.p", "wb")
 pickle.dump(model, pickleOut)
 pickleOut.close()
+
+model.save('model_trained.h5')
