@@ -120,25 +120,41 @@ def initializePredectionModel():
 # get the prediction of each box
 
 
-def getPrediction(boxes, model):
+def predictDigits(boxes, model):
     result = []
-    for image in boxes:
+    for box in boxes:
         # prepare the image
-        img = np.asarray(image)
+        img = np.asarray(box)
         img = img[4:img.shape[0]-4, 4:img.shape[1]-4]  # remove the border
-        img = cv.resize(img, (28, 28))
+        img = cv.resize(img, (32, 32))
         img = img/255
-        img = img.reshape(1, 28, 28, 1)
+        img = img.reshape(1, 32, 32, 1)
 
         # predict
         predictions = model.predict(img)
         classIndex = np.argmax(predictions)
         probabilityValue = np.amax(predictions)
+        print(classIndex, probabilityValue)
 
         # check if probability is above threshold
         threshold = 0.8
         if probabilityValue > threshold:
             result.append(classIndex)
         else:
-            result.append(0)
+            result.append(0)  # empty cell
     return result
+
+# display digits on image
+
+
+def displayDigitsOnImg(img, digits, color=(0, 255, 0)):
+    boxWidth = int(img.shape[1]/9)  # width of each box
+    boxHeight = int(img.shape[0]/9)  # height of each box
+    for x in range(0, 9):
+        for y in range(0, 9):
+            if digits[(y*9)+x] != 0:
+                # put text on the image
+                cv.putText(img, str(digits[(y*9)+x]),
+                           (x*boxWidth+int(boxWidth/2)-10, int((y+0.8)*boxHeight)),
+                           cv.FONT_HERSHEY_COMPLEX_SMALL, 2, color, 2, cv.LINE_AA)
+    return img

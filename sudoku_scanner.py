@@ -1,7 +1,7 @@
 import cv2 as cv
 import numpy as np
 
-from utils import preProcessImg, stackImages, findBiggestContour, reoderPoints, splitImgToBoxes, initializePredectionModel
+from utils import preProcessImg, stackImages, findBiggestContour, reoderPoints, splitImgToBoxes, initializePredectionModel, predictDigits, displayDigitsOnImg
 
 imgPath = "sudokuImages/1.jpg"
 imgHeight = 450
@@ -47,11 +47,21 @@ if biggestContourPoints.size != 0:
     boxes = splitImgToBoxes(imgWarpColored)
     # print(len(boxes))
     # cv.imshow("Sample Box", boxes[0])
+    detectedDigits = predictDigits(boxes, digitsClassModel)
+    print(detectedDigits)
+    imgDetectedDigits = blankImg.copy()
+    imgDetectedDigits = displayDigitsOnImg(
+        imgDetectedDigits, detectedDigits, color=(255, 0, 255))
+
+    detectedDigits = np.array(detectedDigits)
+    # assign 0 to empty cells and 1 to filled cells - cell position array
+    posArray = np.where(detectedDigits > 0, 0, 1)
+    print(posArray)
 
 
 # stack images
 imgArray = ([img, imgThreshold, imgContours],
-            [imgBigContours, imgWarpColored, blankImg])
+            [imgBigContours, imgWarpColored, imgDetectedDigits])
 stackedImg = stackImages(imgArray, 0.8)
 cv.imshow("Stacked Images", stackedImg)
 cv.waitKey(0)
