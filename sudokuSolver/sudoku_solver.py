@@ -40,7 +40,7 @@ class emptySpace:
 
 
 def main(parameters):
-    print('Sudoku Solver')
+    print('------Sudoku Solver------')
     # print("Validating parameters...")
     validateParameters(parameters)
     # print("Loading puzzle...")
@@ -56,8 +56,7 @@ def main(parameters):
 
     # print sudoku puzzle
     print('___Sudoku Puzzle___')
-    for val in puzzleMatrix:
-        print(' '.join(val))
+    printSudoku(puzzleMatrix)
 
     # record the start time
     startTime = time.time()
@@ -78,8 +77,7 @@ def main(parameters):
             # fill the solved values into the puzzle matrix
             solvedSudoku[emptyCell.row][emptyCell.col] = emptyCell.value
         print('___Solved Sudoku___')
-        for val in solvedSudoku:
-            print(' '.join(val))
+        printSudoku(solvedSudoku)
         # write the solved puzzle to output file
         writeSolutionToFile(parameters, solvedSudoku, isSolved=True)
     else:
@@ -325,6 +323,25 @@ def createEmptyCells(puzzle):
                 # add empty cell to the list
                 emptyCells.append(emptySpace(row, col))
     return emptyCells
+
+# print the sudoku puzzle
+# puzzleMatrix: a 2D puzzle matrix
+
+
+def printSudoku(puzzleMatrix):
+    subMatrixLength = 4 if isHexadoku else 3
+    for rowIndex, row in enumerate(puzzleMatrix):
+        if rowIndex % subMatrixLength == 0 and rowIndex != 0:
+            if isHexadoku:
+                print('|------------------------------------------------|')
+            else:
+                print('|-------|-------|-------|')
+        print('|', end=' ')
+        for colIndex, val in enumerate(row):
+            if colIndex % subMatrixLength == 0 and colIndex != 0:
+                print('|', end=' ')
+            print(val, end=' ')
+        print('|')
 
 # Solve the puzzle.
 # first check if each empty cell has at least one potential value. If not, the puzzle is not solvable.
