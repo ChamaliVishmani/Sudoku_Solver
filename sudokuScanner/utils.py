@@ -114,7 +114,7 @@ def splitImgToBoxes(img):
 
 def initializePredectionModel():
     # load the model
-    model = load_model('digits_classification/model_trained.h5')
+    model = load_model('../digits_classification/model_trained.h5')
     return model
 
 # get the prediction of each box

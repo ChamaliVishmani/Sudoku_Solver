@@ -3,7 +3,7 @@ import numpy as np
 
 from utils import preProcessImg, stackImages, findBiggestContour, reoderPoints, splitImgToBoxes, initializePredectionModel, predictDigits, displayDigitsOnImg
 
-imgPath = "sudokuImages/1.jpg"
+imgPath = "../sudokuImages/1.jpg"
 imgHeight = 450
 imgWidth = 450
 digitsClassModel = initializePredectionModel()
