@@ -1,4 +1,5 @@
-#!/usr/bin/env python
+# Sudoku Solving Algorithm
+# 19/ENG/108
 
 import sys
 import os.path
