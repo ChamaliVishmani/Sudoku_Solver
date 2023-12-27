@@ -1,227 +1,454 @@
-import time
+#!/usr/bin/env python
+
 import sys
+import os.path
+import time
 
-# Dictionary to store the positions of the elements to be filled
-# elementPositions = {element : [[row1, col1], [row2, col2]]}
-elementPositions = {}
+attemptCount = 0
 
-# Dictionary to store the count of the elements to be filled
-# countLeft = { element: count }
-countLeft = {}
-
-# Dictionary to store the possible positions of the elements to be filled
-# possiblePositions = {
-# element: { row1: [col1,col2], row2: [col1,col2] }
-# }
-possiblePositions = {}
-
-puzzleLength = 9  # Default puzzle length 9x9 sudoku
-subMatrixLength = 3  # Default sub matrix length 3x3
-
-# Print the puzzle
+# increment the number of attempts by 1 each time a potential value is assigned to a cell. Used to check the puzzle difficulty.
 
 
-def printPuzzle():
-    for i in range(0, puzzleLength):
-        for j in range(0, puzzleLength):
-            print(str(puzzle[i][j]), end=" ")
-        print()
+def IncreaseAttemptCount():
+    global attemptCount
+    attemptCount += 1
+
+# get the number of attempts
 
 
-# Method to check if the inserted element is safe by checking if the element is present in the same row, column or the 3x3 sub matrix
-# row: row index
-# col: column index
-def safeToAddAtPos(row, col):
-
-    num = puzzle[row][col]
-    for i in range(0, puzzleLength):
-        # Check if the element is present in the same row or column other than the current row and column
-        if i != col and puzzle[row][i] == num:
-            return False
-        if i != row and puzzle[i][col] == num:
-            return False
-
-    # Check if the element is present in the same sub matrix
-    rowStart = int(row / subMatrixLength) * subMatrixLength
-    rowEnd = rowStart + subMatrixLength
-
-    colStart = int(col / subMatrixLength) * subMatrixLength
-    colEnd = colStart + subMatrixLength
-
-    for currentRow in range(rowStart, rowEnd):
-        for currentCol in range(colStart, colEnd):
-            if currentRow != row and currentCol != col and puzzle[currentRow][currentCol] == num:
-                return False
-    return True
-
-# Recursively fill the puzzle
-# Loop through each possible positions of the element in the puzzle matrix and if empty, add element to the position and check if it is safe. If safe, then if more possible rows are present, then recursively call the method with next row and if no more possible rows are present, then if more elements are present, then recursively call the method with next element and if no more elements are present, then return True. If not safe, then backtrack and try next position of the element. If no more positions are present, then return False.
-# elementIndex: index of the element to be inserted
-# elements: list of elements to be inserted
-# rowIndex: index of the row to be inserted
-# possibleRows: list of row index where element could be inserted
+def getAttempts():
+    return attemptCount
 
 
-def solvePuzzle(elementIndex, elements, rowIndex, possibleRows):
-    if rowIndex >= len(possibleRows):
-        return False
+class emptySpace:
+    def __init__(self, rowIndex, colIndex):
+        self.row = rowIndex
+        self.col = colIndex
+        self.subMatrix = findSubmatrixNo(rowIndex, colIndex)
+        self.value = '0'
+        self.potentialVals = set()
 
-    possibleCols = list(
-        possiblePositions[elements[elementIndex]][possibleRows[rowIndex]])
-    for col in possibleCols:
-        if puzzle[possibleRows[rowIndex]][col] > 0:  # If the position is already filled
-            continue
-        # Add the element to the position
-        puzzle[possibleRows[rowIndex]][col] = elements[elementIndex]
-        if safeToAddAtPos(possibleRows[rowIndex], col):
-            if rowIndex < len(possibleRows) - 1:
-                if solvePuzzle(elementIndex, elements, rowIndex + 1, possibleRows):
-                    return True
+    def setPotentialVals(self, potentialVals):
+        self.potentialVals = potentialVals
+
+    def setValue(self, value):
+        self.value = value
+
+    def __lt__(self, other):
+        if len(self.potentialVals) < len(other.potentialVals):
+            return True
+
+
+def main(parameters):
+    print('Sudoku Solver')
+    # print("Validating parameters...")
+    validateParameters(parameters)
+    # print("Loading puzzle...")
+    loadedPuzzle = loadPuzzle(parameters[1])
+    # print("Finding available values...")
+    availableVals = findAvailbleVals(loadedPuzzle)
+    puzzleMatrix = createSudokuMatrix(loadedPuzzle)
+    # print("puzzleMatrix: " + str(puzzleMatrix))
+    rowValSets = createRowValSets(puzzleMatrix)
+    colValSets = createColValSets(puzzleMatrix)
+    subMatrixSets = createSubMatrixSets(puzzleMatrix)
+    emptyCells = createEmptyCells(puzzleMatrix)
+
+    # print sudoku puzzle
+    print('___Sudoku Puzzle___')
+    for val in puzzleMatrix:
+        print(' '.join(val))
+
+    # record the start time
+    startTime = time.time()
+
+    # solve the puzzle
+    if puzzleIsSolved(emptyCells, rowValSets, colValSets, subMatrixSets, availableVals):
+        # record the end time
+        endTime = time.time()
+        timeTaken = endTime - startTime
+        print('Sudoku solved!')
+        noOfAttempts = getAttempts()
+        print('Number of attempts: ' + str(noOfAttempts))
+        print('Time taken to solve: ' + str(timeTaken) + ' seconds')
+        solvedSudoku = puzzleMatrix
+
+        # empty cells have solved values for initial empty cells in the puzzle
+        for emptyCell in emptyCells:
+            # fill the solved values into the puzzle matrix
+            solvedSudoku[emptyCell.row][emptyCell.col] = emptyCell.value
+        print('___Solved Sudoku___')
+        for val in solvedSudoku:
+            print(' '.join(val))
+    else:
+        print('No solution!')
+
+# check whether the input parameters are valid. If the number of parameters is not 2, or the input file is not a .txt file, or the input file does not exist, the program will exit with an error message.
+# arguments: input arguments
+
+
+def validateParameters(arguments):
+    global inputFile
+    # validate number of arguments
+    if len(arguments) != 2:
+        sys.exit('Requires exactly one argument (input.txt)')
+
+    inputFile = arguments[1]
+
+    # validate argument type
+    if not inputFile.endswith('.txt'):
+        sys.exit('input file must be a .txt file')
+
+    # check if input file exists
+    if not os.path.isfile(inputFile):
+        sys.exit('input file not found: ' + inputFile)
+
+# load puzzle from input file. If the format of sudoku is not i 9x9 or 16x16, the program will exit with an error message. If the format is 16`x16, the program will set isHexadoku to True, otherwise, set isHexadoku to False.
+# returns a list of strings, each string represents a line in the input file
+# filename: input file name
+
+
+def loadPuzzle(filename):
+    global isHexadoku
+    inputFile = open(filename, 'r')
+    # remove trailing whitespace from each line
+    puzzleLines = [line.rstrip() for line in inputFile]
+    inputFile.close()
+
+    # validate the format of sudoku
+    if len(puzzleLines) != 16 and len(puzzleLines) != 9:
+        sys.exit('The input file has invalid format. Need 9 or 16 lines. But found ' +
+                 str(len(puzzleLines)) + ' lines.')
+
+    if len(puzzleLines) == 16:
+        isHexadoku = True
+    else:
+        isHexadoku = False
+
+    for i, line in enumerate(puzzleLines):
+        # split values based on whitespace
+        values = line.split()
+        if isHexadoku:
+            if len(values) != 16:
+                sys.exit('The input file has invalid format. Need 16 characters per line. But found ' + str(
+                    len(values)) + ' characters on line ' + str(i + 1) + '.')
+        else:
+            if len(values) != 9:
+                sys.exit('The input file has invalid format. Need 9 characters per line. But found ' + str(
+                    len(values)) + ' characters on line ' + str(i + 1) + '.')
+    return puzzleLines
+
+# find all available values in the puzzle. If the puzzle is 9x9, the available values are 1 to 9. If the puzzle is 16x16, the available values are 0 to 16. If the puzzle contains any other values, the program will exit with an error message.
+# returns a set of available values
+# lines: a list of strings, each string represents a line in the input file
+
+
+def findAvailbleVals(lines):
+    availableVals = set()
+    for line in lines:
+        # split values based on whitespace
+        values = line.split()
+        for val in values:
+            # print("val: " + val)
+            if val != '0':
+                # add val to availableVals if cell is not empty and val is not already in availableVals
+                availableVals.add(val)
+    if isHexadoku and len(availableVals) != 16:
+        sys.exit("Hexadoku puzzle should have 16 unique symbols, found " +
+                 str(len(availableVals)) + ": " + ', '.join(sorted(availableVals)))
+    elif not isHexadoku and len(availableVals) != 9:
+        sys.exit("Sudoku puzzle should have 9 unique symbols, found " +
+                 str(len(availableVals)) + ": " + ', '.join(sorted(availableVals)))
+    # print("Available values: " + ', '.join(sorted(availableVals)))
+    return availableVals
+
+# create a 2D puzzle matrix from the list of strings. Each string represents a line in the input file.
+# returns a 2D puzzle matrix
+# lines: a list of strings, each string represents a line in the input file
+
+
+def createSudokuMatrix(lines):
+    matrix = []
+    for line in lines:
+        row = []
+        # split values based on whitespace
+        values = line.split()
+        for val in values:
+            row.append(val)
+        matrix.append(row)
+    return matrix
+
+# create a list of sets, each set contains all values in a row. If the puzzle contains any duplicate values in a row, the program will exit with an error message.
+# returns a list of sets, each set contains all values in a row
+# puzzle: a 2D puzzle matrix
+
+
+def createRowValSets(puzzle):
+    valsInRows = []
+    for index, row in enumerate(puzzle):
+        valsInRow = set()
+        for val in row:
+            if val != '0':
+                if val in valsInRow:
+                    sys.exit("Invalid puzzle: found duplicate value " +
+                             val + " in row " + str(index + 1))
                 else:
-                    # Backtrack if the element cannot be inserted in the position
-                    puzzle[possibleRows[rowIndex]][col] = 0
-                    continue
-            else:  # Last row
-                if elementIndex < len(elements) - 1:
-                    # Next element
-                    nextElementRows = list(possiblePositions[
-                        elements[elementIndex + 1]].keys())
-                    if solvePuzzle(elementIndex + 1, elements, 0, nextElementRows):
+                    valsInRow.add(val)
+        valsInRows.append(valsInRow)
+    return valsInRows
+
+# create a list of sets, each set contains all values in a column. If the puzzle contains any duplicate values in a column, the program will exit with an error message.
+# returns a list of sets, each set contains all values in a column
+# puzzle: a 2D puzzle matrix
+
+
+def createColValSets(puzzle):
+    valsInCols = []
+    puzzleLength = 16 if isHexadoku else 9
+
+    for col in range(puzzleLength):
+        valsInCol = set()
+        for row in range(puzzleLength):
+            if puzzle[row][col] != '0':
+                if puzzle[row][col] in valsInCol:
+                    sys.exit('Invalid puzzle: found duplicate value ' +
+                             puzzle[row][col] + ' in column ' + str(col + 1))
+                else:
+                    valsInCol.add(puzzle[row][col])
+        valsInCols.append(valsInCol)
+    return valsInCols
+
+# create a list of sets, each set contains all values in a submatrix. If the puzzle contains any duplicate values in a submatrix, the program will exit with an error message.
+# returns a list of sets, each set contains all values in a submatrix
+# puzzle: a 2D puzzle matrix
+
+
+def createSubMatrixSets(puzzle):
+    subMatrixes = []
+    puzzleLength = 16 if isHexadoku else 9
+    for n in range(puzzleLength):
+        # create a set for each submatrix
+        subMatrixes.append(set())
+    for row in range(puzzleLength):
+        for col in range(puzzleLength):
+            if puzzle[row][col] != '0':
+                subMatrixNo = findSubmatrixNo(row, col)
+                if puzzle[row][col] in subMatrixes[subMatrixNo]:
+                    sys.exit('Invalid puzzle: found duplicate value ' +
+                             puzzle[row][col] + ' in submatrix ' + str(subMatrixNo))
+                else:
+                    # add value to the set of the submatrix
+                    subMatrixes[subMatrixNo].add(puzzle[row][col])
+    return subMatrixes
+
+# find the submatrix number of a cell in the puzzle. If the puzzle is 9x9, there are 9 submatrixes, numbered from 0 to 8. If the puzzle is 16x16, there are 16 submatrixes, numbered from 0 to 15.
+# returns the submatrix number of a cell
+# row: row number of the cell
+# col: column number of the cell
+
+
+def findSubmatrixNo(row, col):
+    if isHexadoku:
+        if 0 <= row <= 3:
+            if 0 <= col <= 3:
+                return 0
+            elif 4 <= col <= 7:
+                return 1
+            elif 8 <= col <= 11:
+                return 2
+            elif 12 <= col <= 15:
+                return 3
+        elif 4 <= row <= 7:
+            if 0 <= col <= 3:
+                return 4
+            elif 4 <= col <= 7:
+                return 5
+            elif 8 <= col <= 11:
+                return 6
+            elif 12 <= col <= 15:
+                return 7
+        elif 8 <= row <= 11:
+            if 0 <= col <= 3:
+                return 8
+            elif 4 <= col <= 7:
+                return 9
+            elif 8 <= col <= 11:
+                return 10
+            elif 12 <= col <= 15:
+                return 11
+        elif 12 <= row <= 15:
+            if 0 <= col <= 3:
+                return 12
+            elif 4 <= col <= 7:
+                return 13
+            elif 8 <= col <= 11:
+                return 14
+            elif 12 <= col <= 15:
+                return 15
+    else:
+        if 0 <= row <= 2:
+            if 0 <= col <= 2:
+                return 0
+            elif 3 <= col <= 5:
+                return 1
+            elif 6 <= col <= 8:
+                return 2
+        elif 3 <= row <= 5:
+            if 0 <= col <= 2:
+                return 3
+            elif 3 <= col <= 5:
+                return 4
+            elif 6 <= col <= 8:
+                return 5
+        elif 6 <= row <= 8:
+            if 0 <= col <= 2:
+                return 6
+            elif 3 <= col <= 5:
+                return 7
+            elif 6 <= col <= 8:
+                return 8
+
+# create a list of empty cells in the puzzle.
+# returns a list of empty cells
+# puzzle: a 2D puzzle matrix
+
+
+def createEmptyCells(puzzle):
+    emptyCells = []
+    puzzleLength = 16 if isHexadoku else 9
+    for row in range(puzzleLength):
+        for col in range(puzzleLength):
+            if puzzle[row][col] == '0':
+                # add empty cell to the list
+                emptyCells.append(emptySpace(row, col))
+    return emptyCells
+
+# Solve the puzzle.
+# first check if each empty cell has at least one potential value. If not, the puzzle is not solvable.
+# then pops the first empty cell from the list, and assign a potential value to it and check if the puzzle is solved. If not, assign another potential value to it and check again recursivly until the puzzle is solved or all potential values are checked.
+# if the puzzle is solved, restore the empty cell to the list for backtracking.
+# returns True if the puzzle is solved, otherwise returns False
+# emptyCells: a list of empty cells
+# rowValSets: a list of sets, each set contains all values in a row
+# colValSets: a list of sets, each set contains all values in a column
+# subMatrixSets: a list of sets, each set contains all values in a submatrix
+# availableVals: a set of available values in the puzzle
+
+
+def puzzleIsSolved(emptyCells, rowValSets, colValSets, subMatrixSets, availableVals):
+    if allCellsHavePotentialVals(emptyCells, rowValSets, colValSets, subMatrixSets, availableVals):
+        emptyCell = emptyCells.pop(0)
+        for potentialVal in emptyCell.potentialVals:
+            # assign potential value to the empty cell
+            emptyCell.setValue(potentialVal)
+            # increase the number of checks by 1
+            IncreaseAttemptCount()
+            addToAvailableValsSets(
+                emptyCell, rowValSets, colValSets, subMatrixSets)
+            if isPuzzleSolved(rowValSets, colValSets, subMatrixSets):
+                # restore the empty cell to the list for backtracking
+                emptyCells.insert(0, emptyCell)
+                return True
+            else:
+                if emptyCells:
+                    # solve the next empty cell
+                    if puzzleIsSolved(emptyCells, rowValSets, colValSets, subMatrixSets, availableVals):
+                        # restore the empty cell to the list for backtracking
+                        emptyCells.insert(0, emptyCell)
                         return True
                     else:
-                        # Backtrack
-                        puzzle[possibleRows[rowIndex]][col] = 0
-                        continue
-                return True
-        # Backtrack
-        puzzle[possibleRows[rowIndex]][col] = 0
-    return False
+                        # the current potential value is not valid, remove it from the available values sets
+                        removeFromAvailableValsSets(emptyCell, rowValSets,
+                                                    colValSets, subMatrixSets)
+                        emptyCell.setValue('0')
+                # all empty cells are considered, the puzzle is not solvable
+                else:
+                    # the current potential value is not valid, remove it from the available values sets
+                    removeFromAvailableValsSets(emptyCell, rowValSets,
+                                                colValSets, subMatrixSets)
+                    emptyCell.setValue('0')
+        # restore the empty cell to the list for backtracking
+        emptyCells.insert(0, emptyCell)
+        # there are no potential values for at least one empty cell, the puzzle is not solvable
+        return False
+    # there are no potential values for at least one empty cell, the puzzle is not solvable
+    else:
+        return False
+
+# find the potential values for each empty cell in the puzzle. Then sort the empty cells by the number of potential values in ascending order.
+# returns True if all empty cells have at least one potential value, otherwise returns False
+# emptyCells: a list of empty cells
+# rowValSets: a list of sets, each set contains all values in a row
+# colValSets: a list of sets, each set contains all values in a column
+# subMatrixSets: a list of sets, each set contains all values in a submatrix
+# availableVals: a set of available values in the puzzle
 
 
-# Record the positions of the elements to be filled and the count of the elements to be filled
-def recordPostionsAndCountLeft():
-    for row in range(0, puzzleLength):
-        for col in range(0, puzzleLength):
-            # If a number is present in the position
-            if puzzle[row][col] > 0:
-                if puzzle[row][col] not in elementPositions:
-                    # Add the element to the elementPositions dictionary
-                    elementPositions[puzzle[row][col]] = []
-                # Add the position of the element to the elementPositions dictionary
-                elementPositions[puzzle[row][col]].append([row, col])
-                if puzzle[row][col] not in countLeft:
-                    # Add max count of the element to the countLeft dictionary
-                    countLeft[puzzle[row][col]] = puzzleLength
-                # Reduce the count of the element by 1
-                countLeft[puzzle[row][col]] -= 1
+def allCellsHavePotentialVals(emptyCells, rowValSets, colValSets, subMatrixSets, availableVals):
+    for emptyCell in emptyCells:
+        # get the existing values in the row, column and submatrix that the empty cell is in
+        existingValsInRowColSubMatrix = rowValSets[emptyCell.row] | colValSets[
+            emptyCell.col] | subMatrixSets[emptyCell.subMatrix]
 
-    # Add Max count of the elements to the countLeft dictionary for the elements that are not present in the puzzle
-    for row in range(1, puzzleLength + 1):
-        if row not in elementPositions:
-            elementPositions[row] = []
-        if row not in countLeft:
-            countLeft[row] = puzzleLength
-
-# Find the possible positions of the elements to be filled
-# If row and column of the element is already present in the elementPositions dictionary, then skip the position. If not present and position is empty, then add the position to the possiblePositions dictionary
-
-
-def findPossiblePositions():
-    for element, positions in elementPositions.items():
-        if element not in possiblePositions:
-            possiblePositions[element] = {}
-
-        possibleRows = list(range(0, puzzleLength))
-        possibleCols = list(range(0, puzzleLength))
-
-        for currentPosition in positions:
-            if currentPosition[0] in possibleRows:
-                possibleRows.remove(currentPosition[0])
-            if currentPosition[1] in possibleCols:
-                possibleCols.remove(currentPosition[1])
-
-        if len(possibleRows) == 0 or len(possibleCols) == 0:
-            continue
-
-        for r in possibleRows:
-            for c in possibleCols:
-                if puzzle[r][c] == 0:  # If the position is not filled
-                    if r not in possiblePositions[element]:
-                        possiblePositions[element][r] = []
-                    possiblePositions[element][r].append(c)
-
-# Write the solution to the output file
-# outputFile: output file name
-
-
-def writeSolutionToFile(outputFile, isSolved):
-    with open(outputFile, 'w') as file:
-        if isSolved:
-            for row in puzzle:
-                file.write(' '.join(map(str, row)) + '\n')
+        potentialVals = availableVals - existingValsInRowColSubMatrix
+        if potentialVals:
+            emptyCell.setPotentialVals(potentialVals)
         else:
-            file.write('No Solution')
+            return False
+    # print("before sort: ")
+    # for cell in emptyCells:
+    #     print(len(cell.potentialVals))
+    emptyCells.sort()
+    # print("after sort: ")
+    # for cell in emptyCells:
+    #     print(len(cell.potentialVals))
+    return True
+
+# add the value of an empty cell to the row, column and submatrix sets which contain available values for row, column and submatrix that the empty cell is in.
+# emptyCell: an empty cell
+# rowValSets: a list of sets, each set contains all values in a row
+# colValSets: a list of sets, each set contains all values in a column
+# subMatrixSets: a list of sets, each set contains all values in a submatrix
 
 
-def isHexadoku():
-    # check if length of puzzle is 16 and all rows are of length 16
-    return (len(puzzle) == 16 and all(len(row) == 16 for row in puzzle))
+def addToAvailableValsSets(emptyCell, rowValSets, colValSets, subMatrixSets):
+    rowValSets[emptyCell.row].add(emptyCell.value)
+    colValSets[emptyCell.col].add(emptyCell.value)
+    subMatrixSets[emptyCell.subMatrix].add(emptyCell.value)
+
+# check if the puzzle is solved. If all rows, columns and submatrixes contain 16 unique values, the puzzle is solved.
+# returns True if the puzzle is solved, otherwise returns False
+# rowValSets: a list of sets, each set contains all values in a row
+# colValSets: a list of sets, each set contains all values in a column
+# subMatrixSets: a list of sets, each set contains all values in a submatrix
+
+
+def isPuzzleSolved(rowValSets, colValSets, subMatrixSets):
+    puzzleLength = 16 if isHexadoku else 9
+    # check if all rows, columns and submatrixes contain 16 unique values
+    for rowValSet in rowValSets:
+        if len(rowValSet) != puzzleLength:
+            return False
+    for colValSet in colValSets:
+        if len(colValSet) != puzzleLength:
+            return False
+    for subMatrixValSet in subMatrixSets:
+        if len(subMatrixValSet) != puzzleLength:
+            return False
+    return True
+
+# remove the value of an empty cell from the row, column and submatrix sets which contain available values for row, column and submatrix that the empty cell is in.
+# emptyCell: an empty cell
+# rowValSets: a list of sets, each set contains all values in a row
+# colValSets: a list of sets, each set contains all values in a column
+# subMatrixSets: a list of sets, each set contains all values in a submatrix
+
+
+def removeFromAvailableValsSets(emptyCell, rowValSets, colValSets, subMatrixSets):
+    rowValSets[emptyCell.row].discard(emptyCell.value)
+    colValSets[emptyCell.col].discard(emptyCell.value)
+    subMatrixSets[emptyCell.subMatrix].discard(emptyCell.value)
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print('To run the sudoku solver: python sudoku_solver.py <input_file>')
-        sys.exit(1)
-
-    # Read the sudoku puzzle from the input file
-    inputFile = sys.argv[1]
-    try:
-        with open(inputFile, 'r') as file:
-            # Sudoku puzzle as a 2D array
-            puzzle = [[int(num) for num in line.split()]
-                      for line in file.readlines()]
-    except FileNotFoundError:
-        print(f"File '{inputFile}' not found.")
-        sys.exit(1)
-    except ValueError:
-        print(
-            "Invalid content in the input file.")
-        sys.exit(1)
-
-    # Record the start time
-    startTime = time.time()
-
-    if isHexadoku():
-        puzzleLength = 16
-        subMatrixLength = 4
-        print('Hexadoku puzzle')
-
-    printPuzzle()
-
-    recordPostionsAndCountLeft()
-    # print('elementPositions', elementPositions)
-    # print('countLeft', countLeft)
-
-    # Sort the countLeft dictionary based on the count of the elements for optimization - ascending order
-    countLeft = {element: count for element, count in sorted(
-        countLeft.items(), key=lambda item: item[1])}
-    # print('countLeft sorted', countLeft)
-
-    findPossiblePositions()
-    # print('possiblePositions', possiblePositions)
-
-    elements = list(countLeft.keys())
-    # print('elements', elements)
-
-    firstElementRows = list(possiblePositions[elements[0]].keys())
-    # print('firstElementRows', firstElementRows)
-    isSolved = solvePuzzle(0, elements, 0, firstElementRows)
-
-    outputFile = f"{inputFile.split('.')[0]}_output.txt"
-    writeSolutionToFile(outputFile, isSolved)
-
-    print(f"Solution written to {outputFile}")
-
-    # Record the end time
-    endTime = time.time()
-    print('Time taken to solve: ', endTime - startTime, 'seconds')
+    main(sys.argv)
