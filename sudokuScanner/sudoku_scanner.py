@@ -1,7 +1,9 @@
 import cv2 as cv
 import numpy as np
 
-from utils import preProcessImg, stackImages, findBiggestContour, reoderPoints, splitImgToBoxes, initializePredectionModel, predictDigits, displayDigitsOnImg
+from utils import preProcessImg, stackImages, findBiggestContour, reoderPoints, splitImgToBoxes, initializePredectionModel, predictDigits, displayDigitsOnImg, drawSudokuGrid
+
+import sudoku_solver_for_scanner as sudokuSolver
 
 imgPath = "../sudokuImages/1.jpg"
 imgHeight = 450
@@ -47,6 +49,7 @@ if biggestContourPoints.size != 0:
     boxes = splitImgToBoxes(imgWarpColored)
     # print(len(boxes))
     # cv.imshow("Sample Box", boxes[0])
+    print("----predicting digits----")
     detectedDigits = predictDigits(boxes, digitsClassModel)
     print(detectedDigits)
     imgDetectedDigits = blankImg.copy()
@@ -54,15 +57,59 @@ if biggestContourPoints.size != 0:
         imgDetectedDigits, detectedDigits, color=(255, 0, 255))
 
     detectedDigits = np.array(detectedDigits)
-    # assign 0 to empty cells and 1 to filled cells - cell position array
     posArray = np.where(detectedDigits > 0, 0, 1)
-    print(posArray)
+    print("posArray :", posArray)
 
-    # continue - https://youtu.be/qOXDoYUgNlU?si=vZRYGnANS2Mcss8g&t=2239
+    puzzleLines = [' '.join(map(str, detectedDigits[i:i+9]))
+                   for i in range(0, len(detectedDigits), 9)]
 
-# stack images
-imgArray = ([img, imgThreshold, imgContours],
-            [imgBigContours, imgWarpColored, imgDetectedDigits])
-stackedImg = stackImages(imgArray, 0.8)
-cv.imshow("Stacked Images", stackedImg)
+    # print(puzzleLines)
+    print("----solving sudoku----")
+    try:
+        solvedSudoku = sudokuSolver.sudokuSolver(puzzleLines)
+    except:
+        print("Error in solving sudoku")
+        pass
+
+    print("solved", solvedSudoku)
+
+    # convert to flat list
+    flatList = []
+    for sublist in solvedSudoku:
+        for item in sublist:
+            flatList.append(int(item))
+
+    print("flat", flatList)
+
+    # display solved digits
+    # make puzzle values 0
+    solvedDigits = flatList * posArray
+    imgSolvedDigits = displayDigitsOnImg(
+        imgSolvedDigits, solvedDigits, color=(0, 255, 0))
+
+    # overlay solved digits onto original image
+    bigContourPts = np.float32(biggestContourPoints)
+    puzzleConers = np.float32(
+        [[0, 0], [imgWidth, 0], [0, imgHeight], [imgWidth, imgHeight]])
+    # create perspective transform matrix
+    transformMatrix = cv.getPerspectiveTransform(puzzleConers, bigContourPts)
+
+    imgInvWarpColored = img.copy()
+    imgInvWarpColored = cv.warpPerspective(
+        imgSolvedDigits, transformMatrix, (imgWidth, imgHeight))
+
+    solutionBlendedImg = cv.addWeighted(imgInvWarpColored, 1, img, 0.5, 1)
+
+    imgDetectedDigits = drawSudokuGrid(imgDetectedDigits)
+    imgSolvedDigits = drawSudokuGrid(imgSolvedDigits)
+
+    # stack images
+    imgArray = ([img, imgThreshold, imgContours],
+                [imgBigContours, imgWarpColored, imgDetectedDigits], [imgSolvedDigits, imgInvWarpColored, solutionBlendedImg])
+    stackedImg = stackImages(imgArray, 0.5)
+    cv.imshow("Stacked Images", stackedImg)
+
+else:
+    print("No sudoku found")
+
 cv.waitKey(0)

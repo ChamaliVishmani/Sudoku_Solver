@@ -158,3 +158,18 @@ def displayDigitsOnImg(img, digits, color=(0, 255, 0)):
                            (x*boxWidth+int(boxWidth/2)-10, int((y+0.8)*boxHeight)),
                            cv.FONT_HERSHEY_COMPLEX_SMALL, 2, color, 2, cv.LINE_AA)
     return img
+
+# draw grid on image
+
+
+def drawSudokuGrid(img):
+    width = int(img.shape[1]/9)
+    height = int(img.shape[0]/9)
+    for i in range(0, 9):
+        leftPt = (0, height*i)
+        rightPt = (img.shape[1], height*i)
+        topPt = (width * i, 0)
+        bottomPt = (width*i, img.shape[0])
+        cv.line(img, leftPt, rightPt, (255, 255, 0), 2)
+        cv.line(img, topPt, bottomPt, (255, 255, 0), 2)
+    return img
