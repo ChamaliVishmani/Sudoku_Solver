@@ -45,10 +45,6 @@ class emptySpace:
 
 def sudokuSolver(puzzle):
     print('------Sudoku Solver------')
-    # print("Validating parameters...")
-    # validateParameters(parameters)
-    # print("Loading puzzle...")
-    # print("puzzle", puzzle)
     loadedPuzzle = loadPuzzle(puzzle)
     # print("Finding available values...")
     availableVals = findAvailbleVals(loadedPuzzle)
@@ -93,27 +89,6 @@ def sudokuSolver(puzzle):
         print(solvedSudoku)
         return None
 
-
-# check whether the input parameters are valid. If the number of parameters is not 2, or the input file is not a .txt file, or the input file does not exist, the program will exit with an error message.
-# arguments: input arguments
-
-
-# def validateParameters(arguments):
-#     global inputFile
-#     # validate number of arguments
-#     if len(arguments) != 2:
-#         sys.exit('Requires exactly one argument (input.txt)')
-
-#     inputFile = arguments[1]
-
-#     # validate argument type
-#     if not inputFile.endswith('.txt'):
-#         sys.exit('input file must be a .txt file')
-
-#     # check if input file exists
-#     if not os.path.isfile(inputFile):
-#         sys.exit('input file not found: ' + inputFile)
-
 # load puzzle from input file. If the format of sudoku is not i 9x9 or 16x16, the program will exit with an error message. If the format is 16`x16, the program will set isHexadoku to True, otherwise, set isHexadoku to False.
 # returns a list of strings, each string represents a line in the input file
 # filename: input file name
@@ -121,10 +96,6 @@ def sudokuSolver(puzzle):
 
 def loadPuzzle(puzzleLines):
     global isHexadoku
-    # inputFile = open(filename, 'r')
-    # remove trailing whitespace from each line
-    # puzzleLines = [line.rstrip() for line in puzzle]
-    # inputFile.close()
     print("puzzleLines: " + str(puzzleLines))
     print(len(puzzleLines))
     # validate the format of sudoku

@@ -92,8 +92,7 @@ def main(parameters):
         try:
             solvedSudoku = sudokuSolver.sudokuSolver(puzzleLines)
         except:
-            print("Error in solving sudoku")
-            pass
+            sys.exit("Error in solving sudoku")
 
         # print("solved", solvedSudoku)
 
@@ -107,7 +106,7 @@ def main(parameters):
         # make puzzle values 0
         solvedDigits = flatList * posArray
         imgSolvedDigits = displayDigitsOnImg(
-            imgSolvedDigits, solvedDigits, color=(0, 255, 0))
+            imgSolvedDigits, solvedDigits, color=(0, 255, 0), isHexadoku=isHexadoku)
 
         # overlay solved digits onto original image
         bigContourPts = np.float32(biggestContourPoints)
@@ -127,9 +126,10 @@ def main(parameters):
         imgSolvedDigits = drawSudokuGrid(imgSolvedDigits, isHexadoku)
 
         # stack images
-        imgArray = ([img, imgThreshold, imgContours],
-                    [imgBigContours, imgWarpColored, imgDetectedDigits], [imgSolvedDigits, imgInvWarpColored, solutionBlendedImg])
-        stackedImg = stackImages(imgArray, 0.4)
+        imgArray = ([img, imgThreshold, imgContours, imgWarpColored],
+                    [imgDetectedDigits, imgSolvedDigits, imgInvWarpColored, solutionBlendedImg])
+        scaleSize = 0.45 if isHexadoku else 0.5
+        stackedImg = stackImages(imgArray, scaleSize)
         cv.imshow("Stacked Images", stackedImg)
 
     else:

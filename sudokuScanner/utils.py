@@ -169,9 +169,23 @@ def displayDigitsOnImg(img, digits, color=(0, 255, 0), isHexadoku=False):
         for y in range(0, puzzleLength):
             if digits[(y*puzzleLength)+x] != 0:
                 # put text on the image
-                cv.putText(img, str(digits[(y*puzzleLength)+x]),
-                           (x*boxWidth+int(boxWidth/2)-10, int((y+0.8)*boxHeight)),
-                           cv.FONT_HERSHEY_COMPLEX_SMALL, 2, color, 2, cv.LINE_AA)
+                # cv.putText(img, str(digits[(y*puzzleLength)+x]),
+                #            (x*boxWidth+int(boxWidth/2)-10, int((y+0.8)*boxHeight)),
+                #            cv.FONT_HERSHEY_COMPLEX_SMALL, 2, color, 2, cv.LINE_AA)
+                digit = digits[(y*puzzleLength)+x]
+                # Calculate text size based on the puzzle size
+                font_size = 1.2 if isHexadoku else 2
+                font_thickness = 2 if isHexadoku else 2
+
+                # Calculate text position based on the puzzle size
+                text_x = x * boxWidth + int(boxWidth / 2) - 10
+                text_y = y * boxHeight + int(boxHeight * 0.8)
+
+                # put text on the image
+                cv.putText(img, str(digit),
+                           (text_x, text_y),
+                           cv.FONT_HERSHEY_COMPLEX_SMALL,
+                           font_size, color, font_thickness, cv.LINE_AA)
     return img
 
 # draw grid on image
