@@ -10,7 +10,7 @@ from keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPooling2D
 from keras.optimizers import Adam
 import pickle
 
-dataPath = "data"
+dataPath = "data_3"
 testRatio = 0.2  # 20% of data used for testing
 validationRatio = 0.2
 imageDimensions = (32, 32, 3)
@@ -182,8 +182,8 @@ print('Test score: ', score[0])
 print('Test accuracy: ', score[1])
 
 # save model
-pickleOut = open("model_trained.p", "wb")
+pickleOut = open("model_trained_16.p", "wb")
 pickle.dump(model, pickleOut)
 pickleOut.close()
 
-model.save('model_trained.h5')
+model.save('model_trained_16.h5')
