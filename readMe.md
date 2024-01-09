@@ -4,7 +4,7 @@
 python sudoku_solver.py
 ```
 
-- Show your sudoku / hexadoku image to the camera feed and enter any key to capture the image.
+- Show your sudoku / hexadoku image to the camera feed and press any key to capture the image.
 - Enter yes if your puzzle is a hexadoku , else enter no
 - Press 'Q' key to leave the camera feed.
 - [Video Demonstration](https://drive.google.com/file/d/18DmfuVisTgBdSjqHzcu55RICqO6GKdfp/view?usp=sharing)
