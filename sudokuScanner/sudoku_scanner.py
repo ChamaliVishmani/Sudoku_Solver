@@ -1,115 +1,162 @@
 import cv2 as cv
 import numpy as np
+import sys
 
-from utils import preProcessImg, stackImages, findBiggestContour, reoderPoints, splitImgToBoxes, initializePredectionModel, predictDigits, displayDigitsOnImg, drawSudokuGrid
+from utils import askUserForPuzzleType, preProcessImg, stackImages, findBiggestContour, reoderPoints, splitImgToBoxes, initializePredectionModel, predictDigits, displayDigitsOnImg, drawSudokuGrid
 
-import sudoku_solver_for_scanner as sudokuSolver
+import sudoku_solver as sudokuSolver
 
-imgPath = "../sudokuImages/1.jpg"
-imgHeight = 450
-imgWidth = 450
+imgHeight_9by9 = 450
+imgWidth_9by9 = 450
+imgHeight_16by16 = 800
+imgWidth_16by16 = 800
 digitsClassModel = initializePredectionModel()
+isHexadoku = False
 
-# prepare image
-img = cv.imread(imgPath)
-img = cv.resize(img, (imgHeight, imgWidth))  # Resize the image
-blankImg = np.zeros((imgHeight, imgWidth, 3), np.uint8)  # Create a blank image
-imgThreshold = preProcessImg(img)  # Preprocess the image
 
-# find contours
-imgContours = img.copy()  # Copy the image - all contours
-imgBigContours = img.copy()  # Copy the image - biggest contour
-contours, hierarchy = cv.findContours(
-    imgThreshold, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)  # Find all contours - external
-cv.drawContours(imgContours, contours, -1, (0, 255, 0), 3)  # Draw all contours
+def main(imgPath):
 
-# find biggest contour
-biggestContourPoints, maxArea = findBiggestContour(contours)
-print("biggest contour", biggestContourPoints)
+    # Get user input for puzzle type
+    isHexadoku = askUserForPuzzleType()
 
-if biggestContourPoints.size != 0:
-    biggestContourPoints = reoderPoints(biggestContourPoints)
-    print("reordered contour", biggestContourPoints)
+    # prepare image
+    img = cv.imread(imgPath)
+    imgHeight = imgHeight_16by16 if isHexadoku else imgHeight_9by9
+    imgWidth = imgWidth_16by16 if isHexadoku else imgWidth_9by9
+    img = cv.resize(img, (imgHeight, imgWidth))  # Resize the image
+    blankImg = np.zeros((imgHeight, imgWidth, 3),
+                        np.uint8)  # Create a blank image
+    imgThreshold = preProcessImg(img)  # Preprocess the image
 
-    # draw biggest contour
-    cv.drawContours(imgBigContours, biggestContourPoints, -1, (0, 0, 255), 25)
+    # find contours
+    imgContours = img.copy()  # Copy the image - all contours
+    imgBigContours = img.copy()  # Copy the image - biggest contour
+    contours, hierarchy = cv.findContours(
+        imgThreshold, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)  # Find all contours - external
+    cv.drawContours(imgContours, contours, -1,
+                    (0, 255, 0), 3)  # Draw all contours
 
-    # get sudoku using warp perspective
-    sourcePoints = np.float32(biggestContourPoints)
-    destinationPoints = np.float32(
-        [[0, 0], [imgWidth, 0], [0, imgHeight], [imgWidth, imgHeight]])
-    transformMatrix = cv.getPerspectiveTransform(
-        sourcePoints, destinationPoints)
-    imgWarpColored = cv.warpPerspective(
-        img, transformMatrix, (imgWidth, imgHeight))
-    imgWarpColored = cv.cvtColor(imgWarpColored, cv.COLOR_BGR2GRAY)
+    # find biggest contour
+    biggestContourPoints, maxArea = findBiggestContour(contours)
 
-    # split image and find digits
-    imgSolvedDigits = blankImg.copy()
-    boxes = splitImgToBoxes(imgWarpColored)
-    # print(len(boxes))
-    # cv.imshow("Sample Box", boxes[0])
-    print("----predicting digits----")
-    detectedDigits = predictDigits(boxes, digitsClassModel)
-    print(detectedDigits)
-    imgDetectedDigits = blankImg.copy()
-    imgDetectedDigits = displayDigitsOnImg(
-        imgDetectedDigits, detectedDigits, color=(255, 0, 255))
+    if biggestContourPoints.size != 0:
+        biggestContourPoints = reoderPoints(biggestContourPoints)
 
-    detectedDigits = np.array(detectedDigits)
-    posArray = np.where(detectedDigits > 0, 0, 1)
-    print("posArray :", posArray)
+        # draw biggest contour
+        cv.drawContours(
+            imgBigContours, biggestContourPoints, -1, (0, 0, 255), 25)
 
-    puzzleLines = [' '.join(map(str, detectedDigits[i:i+9]))
-                   for i in range(0, len(detectedDigits), 9)]
+        # get sudoku using warp perspective
+        sourcePoints = np.float32(biggestContourPoints)
+        destinationPoints = np.float32(
+            [[0, 0], [imgWidth, 0], [0, imgHeight], [imgWidth, imgHeight]])
+        transformMatrix = cv.getPerspectiveTransform(
+            sourcePoints, destinationPoints)
+        imgWarpColored = cv.warpPerspective(
+            img, transformMatrix, (imgWidth, imgHeight))
+        imgWarpColored = cv.cvtColor(imgWarpColored, cv.COLOR_BGR2GRAY)
 
-    # print(puzzleLines)
-    print("----solving sudoku----")
-    try:
-        solvedSudoku = sudokuSolver.sudokuSolver(puzzleLines)
-    except:
-        print("Error in solving sudoku")
-        pass
+        # split image and find digits
+        imgSolvedDigits = blankImg.copy()
+        boxes = splitImgToBoxes(imgWarpColored, isHexadoku)
+        # cv.imshow("Sample Box", boxes[0])
 
-    print("solved", solvedSudoku)
+        print("----predicting digits----")
+        detectedDigits = predictDigits(boxes, digitsClassModel)
+        imgDetectedDigits = blankImg.copy()
+        imgDetectedDigits = displayDigitsOnImg(
+            imgDetectedDigits, detectedDigits, color=(255, 0, 255), isHexadoku=isHexadoku)
 
-    # convert to flat list
-    flatList = []
-    for sublist in solvedSudoku:
-        for item in sublist:
-            flatList.append(int(item))
+        detectedDigits = np.array(detectedDigits)
+        # print("detectedDigits :", detectedDigits)
+        posArray = np.where(detectedDigits > 0, 0, 1)
 
-    print("flat", flatList)
+        puzzleLen = 16 if isHexadoku else 9
+        puzzleLines = [' '.join(map(str, detectedDigits[i:i+puzzleLen]))
+                       for i in range(0, len(detectedDigits), puzzleLen)]
 
-    # display solved digits
-    # make puzzle values 0
-    solvedDigits = flatList * posArray
-    imgSolvedDigits = displayDigitsOnImg(
-        imgSolvedDigits, solvedDigits, color=(0, 255, 0))
+        # save puzzle in text file
+        with open('puzzle.txt', 'w') as file:
+            for line in puzzleLines:
+                file.write(line + '\n')
 
-    # overlay solved digits onto original image
-    bigContourPts = np.float32(biggestContourPoints)
-    puzzleConers = np.float32(
-        [[0, 0], [imgWidth, 0], [0, imgHeight], [imgWidth, imgHeight]])
-    # create perspective transform matrix
-    transformMatrix = cv.getPerspectiveTransform(puzzleConers, bigContourPts)
+        imgArray = ([img, imgThreshold, imgContours],
+                    [imgBigContours, imgWarpColored, imgDetectedDigits])
+        stackedImg = stackImages(imgArray, 0.4)
+        cv.imshow("Stacked Images Before Solving", stackedImg)
+        cv.waitKey(0)
 
-    imgInvWarpColored = img.copy()
-    imgInvWarpColored = cv.warpPerspective(
-        imgSolvedDigits, transformMatrix, (imgWidth, imgHeight))
+        # print(puzzleLines)
+        print("----solving sudoku----")
+        try:
+            solvedSudoku = sudokuSolver.sudokuSolver(puzzleLines)
+        except:
+            sys.exit("Error in solving sudoku")
 
-    solutionBlendedImg = cv.addWeighted(imgInvWarpColored, 1, img, 0.5, 1)
+        # print("solved", solvedSudoku)
 
-    imgDetectedDigits = drawSudokuGrid(imgDetectedDigits)
-    imgSolvedDigits = drawSudokuGrid(imgSolvedDigits)
+        # convert to flat list
+        flatList = []
+        for sublist in solvedSudoku:
+            for item in sublist:
+                flatList.append(int(item))
 
-    # stack images
-    imgArray = ([img, imgThreshold, imgContours],
-                [imgBigContours, imgWarpColored, imgDetectedDigits], [imgSolvedDigits, imgInvWarpColored, solutionBlendedImg])
-    stackedImg = stackImages(imgArray, 0.5)
-    cv.imshow("Stacked Images", stackedImg)
+        # display solved digits
+        # make puzzle values 0
+        solvedDigits = flatList * posArray
+        imgSolvedDigits = displayDigitsOnImg(
+            imgSolvedDigits, solvedDigits, color=(0, 255, 0), isHexadoku=isHexadoku)
 
-else:
-    print("No sudoku found")
+        # overlay solved digits onto original image
+        bigContourPts = np.float32(biggestContourPoints)
+        puzzleConers = np.float32(
+            [[0, 0], [imgWidth, 0], [0, imgHeight], [imgWidth, imgHeight]])
+        # create perspective transform matrix
+        transformMatrix = cv.getPerspectiveTransform(
+            puzzleConers, bigContourPts)
 
-cv.waitKey(0)
+        imgInvWarpColored = img.copy()
+        imgInvWarpColored = cv.warpPerspective(
+            imgSolvedDigits, transformMatrix, (imgWidth, imgHeight))
+
+        solutionBlendedImg = cv.addWeighted(imgInvWarpColored, 1, img, 0.5, 1)
+
+        imgDetectedDigits = drawSudokuGrid(imgDetectedDigits, isHexadoku)
+        imgSolvedDigits = drawSudokuGrid(imgSolvedDigits, isHexadoku)
+
+        # stack images
+        imgArray = ([img, imgThreshold, imgContours, imgWarpColored],
+                    [imgDetectedDigits, imgSolvedDigits, imgInvWarpColored, solutionBlendedImg])
+        scaleSize = 0.45 if isHexadoku else 0.5
+        stackedImg = stackImages(imgArray, scaleSize)
+        cv.imshow("Stacked Images", stackedImg)
+
+    else:
+        print("No sudoku found")
+
+    cv.waitKey(0)
+
+
+if __name__ == "__main__":
+    videoCapture = cv.VideoCapture(0)
+
+    while True:
+        # read the image frame from the camera feed.
+        _, frame = videoCapture.read()
+        original = frame.copy()
+
+        # show the frame
+        cv.imshow("Sudoku Scanner", original)
+
+        # Wait for a key press. If a key is pressed, take a snapshot.
+        if cv.waitKey(1) & 0xFF != 0xFF:
+            cv.imwrite("sudoku_snapshot.jpg", original)
+            print("Snapshot taken. Scanning...")
+            main("sudoku_snapshot.jpg")
+
+        # press 'q' to exit
+        if cv.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    videoCapture.release()
+    cv.destroyAllWindows()

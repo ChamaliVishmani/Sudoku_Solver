@@ -1,17 +1,12 @@
-reference for solver :
+## How to run the scanner
 
-https://github.com/jtortorelli/sudoku16/tree/master
+```
+python sudoku_solver.py
+```
 
-references for scanner :
-
-https://github.com/murtazahassan/OpenCV-Sudoku-Solver/tree/main
-
-https://github.com/murtazahassan/Digits-Classification/tree/master
-
-https://pyimagesearch.com/2021/10/06/opencv-contour-approximation/
-
-Digits data set for CNN train :
-
-https://drive.google.com/file/d/1cZr91zzHl93H1cbmIwx_7upfQPPMPi33/view
-
-run example : python sudoku_solver.py test_inputs/input16by16.txt
+- Show your sudoku / hexadoku image to the camera feed and enter any key to capture the image.
+- Enter yes if your puzzle is a hexadoku , else enter no
+- Press 'Q' key to leave the camera feed.
+- [Video Demonstration](https://drive.google.com/file/d/18DmfuVisTgBdSjqHzcu55RICqO6GKdfp/view?usp=sharing)
+- [GitHub](https://github.com/ChamaliVishmani/Sudoku_Solver)
+- [Digits data set for CNN train](https://drive.google.com/file/d/1cZr91zzHl93H1cbmIwx_7upfQPPMPi33/view)

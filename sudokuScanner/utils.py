@@ -1,6 +1,15 @@
+import os
+import sys
 import cv2 as cv
 import numpy as np
 from tensorflow.keras.models import load_model
+
+# Ask the user whether the puzzle is Hexadoku or not
+
+
+def askUserForPuzzleType():
+    userInput = input("Is the puzzle Hexadoku? (yes/no): ").lower()
+    return userInput == "yes"
 
 
 def preProcessImg(img):
@@ -97,14 +106,19 @@ def reoderPoints(points):
 
     return orderedPoints
 
-# split the image into 81 boxes
+# split the image into submatrix boxes
 
 
-def splitImgToBoxes(img):
-    rows = np.vsplit(img, 9)  # split the image into 9 rows
+def splitImgToBoxes(img, isHexadoku=False):
+    # print("img.shape", img.shape)
+    puzzleLength = 16 if isHexadoku else 9
+    # print("puzzleLength", puzzleLength)
+    # split the image into puzzleLength rows
+    rows = np.vsplit(img, puzzleLength)
     boxes = []
     for row in rows:
-        cols = np.hsplit(row, 9)  # split each row into 9 columns
+        # split each row into puzzleLength columns
+        cols = np.hsplit(row, puzzleLength)
         for box in cols:
             boxes.append(box)
     return boxes
@@ -114,7 +128,8 @@ def splitImgToBoxes(img):
 
 def initializePredectionModel():
     # load the model
-    model = load_model('../digits_classification/model_trained.h5')
+    print("----loading model----")
+    model = load_model('../digits_classification/model_trained_16_2.h5')
     return model
 
 # get the prediction of each box
@@ -147,25 +162,41 @@ def predictDigits(boxes, model):
 # display digits on image
 
 
-def displayDigitsOnImg(img, digits, color=(0, 255, 0)):
-    boxWidth = int(img.shape[1]/9)  # width of each box
-    boxHeight = int(img.shape[0]/9)  # height of each box
-    for x in range(0, 9):
-        for y in range(0, 9):
-            if digits[(y*9)+x] != 0:
+def displayDigitsOnImg(img, digits, color=(0, 255, 0), isHexadoku=False):
+    puzzleLength = 16 if isHexadoku else 9
+    boxWidth = int(img.shape[1]/puzzleLength)  # width of each box
+    boxHeight = int(img.shape[0]/puzzleLength)  # height of each box
+    for x in range(0, puzzleLength):
+        for y in range(0, puzzleLength):
+            if digits[(y*puzzleLength)+x] != 0:
                 # put text on the image
-                cv.putText(img, str(digits[(y*9)+x]),
-                           (x*boxWidth+int(boxWidth/2)-10, int((y+0.8)*boxHeight)),
-                           cv.FONT_HERSHEY_COMPLEX_SMALL, 2, color, 2, cv.LINE_AA)
+                # cv.putText(img, str(digits[(y*puzzleLength)+x]),
+                #            (x*boxWidth+int(boxWidth/2)-10, int((y+0.8)*boxHeight)),
+                #            cv.FONT_HERSHEY_COMPLEX_SMALL, 2, color, 2, cv.LINE_AA)
+                digit = digits[(y*puzzleLength)+x]
+                # Calculate text size based on the puzzle size
+                font_size = 1.2 if isHexadoku else 2
+                font_thickness = 2 if isHexadoku else 2
+
+                # Calculate text position based on the puzzle size
+                text_x = x * boxWidth + int(boxWidth / 2) - 10
+                text_y = y * boxHeight + int(boxHeight * 0.8)
+
+                # put text on the image
+                cv.putText(img, str(digit),
+                           (text_x, text_y),
+                           cv.FONT_HERSHEY_COMPLEX_SMALL,
+                           font_size, color, font_thickness, cv.LINE_AA)
     return img
 
 # draw grid on image
 
 
-def drawSudokuGrid(img):
-    width = int(img.shape[1]/9)
-    height = int(img.shape[0]/9)
-    for i in range(0, 9):
+def drawSudokuGrid(img, isHexadoku=False):
+    puzzleLength = 16 if isHexadoku else 9
+    width = int(img.shape[1]/puzzleLength)
+    height = int(img.shape[0]/puzzleLength)
+    for i in range(0, puzzleLength):
         leftPt = (0, height*i)
         rightPt = (img.shape[1], height*i)
         topPt = (width * i, 0)
@@ -173,3 +204,21 @@ def drawSudokuGrid(img):
         cv.line(img, leftPt, rightPt, (255, 255, 0), 2)
         cv.line(img, topPt, bottomPt, (255, 255, 0), 2)
     return img
+
+# check whether the input parameters are valid. If the number of parameters is not 2, or the input file is not a .txt file, or the input file does not exist, the program will exit with an error message.
+# arguments: input arguments
+
+
+def validateParameters(arguments):
+    global inputFile
+    # validate number of arguments
+    if len(arguments) != 2:
+        sys.exit('Requires exactly one argument (imgPath)')
+
+    inputFile = arguments[1]
+
+    # check if input file exists
+    if not os.path.isfile(inputFile):
+        sys.exit('input file not found: ' + inputFile)
+
+    return inputFile
