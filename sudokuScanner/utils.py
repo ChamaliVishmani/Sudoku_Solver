@@ -128,7 +128,8 @@ def splitImgToBoxes(img, isHexadoku=False):
 
 def initializePredectionModel():
     # load the model
-    model = load_model('../digits_classification/model_trained_16.h5')
+    print("----loading model----")
+    model = load_model('../digits_classification/model_trained_16_2.h5')
     return model
 
 # get the prediction of each box

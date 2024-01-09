@@ -2,7 +2,7 @@ import cv2 as cv
 import numpy as np
 import sys
 
-from utils import askUserForPuzzleType, preProcessImg, stackImages, findBiggestContour, reoderPoints, splitImgToBoxes, initializePredectionModel, predictDigits, displayDigitsOnImg, drawSudokuGrid, validateParameters
+from utils import askUserForPuzzleType, preProcessImg, stackImages, findBiggestContour, reoderPoints, splitImgToBoxes, initializePredectionModel, predictDigits, displayDigitsOnImg, drawSudokuGrid
 
 import sudoku_solver as sudokuSolver
 
@@ -14,8 +14,7 @@ digitsClassModel = initializePredectionModel()
 isHexadoku = False
 
 
-def main(parameters):
-    imgPath = validateParameters(parameters)
+def main(imgPath):
 
     # Get user input for puzzle type
     isHexadoku = askUserForPuzzleType()
@@ -139,4 +138,25 @@ def main(parameters):
 
 
 if __name__ == "__main__":
-    main(sys.argv)
+    videoCapture = cv.VideoCapture(0)
+
+    while True:
+        # read the image frame from the camera feed.
+        _, frame = videoCapture.read()
+        original = frame.copy()
+
+        # show the frame
+        cv.imshow("Sudoku Scanner", original)
+
+        # Wait for a key press. If a key is pressed, take a snapshot.
+        if cv.waitKey(1) & 0xFF != 0xFF:
+            cv.imwrite("sudoku_snapshot.jpg", original)
+            print("Snapshot taken. Scanning...")
+            main("sudoku_snapshot.jpg")
+
+        # press 'q' to exit
+        if cv.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    videoCapture.release()
+    cv.destroyAllWindows()
